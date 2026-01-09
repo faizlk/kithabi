@@ -7,11 +7,9 @@ A privacy-focused, offline-first Islamic deed tracker and habit builder. Feature
 
 ---
 
-### **Full README.md Content**
+# 🌙 Kithabi - Islamic Deed Evaluator
 
-# 🌙 Muhasaba - Islamic Deed Evaluator
-
-**Muhasaba** (Self-Accounting) is a lightweight, privacy-focused web application designed to help Muslims track their daily spiritual obligations, voluntary acts, and personal habits.
+**Kithabi** (Self-Accounting) is a lightweight, privacy-focused web application designed to help Muslims track their daily spiritual obligations, voluntary acts, and personal habits.
 
 Built as a **single HTML file**, it runs completely offline in your browser, using LocalStorage to keep your data secure on your device. It combines spiritual tracking with gamified scoring and strict habit-building challenges.
 
@@ -32,7 +30,6 @@ Built as a **single HTML file**, it runs completely offline in your browser, usi
 * **Strict Accountability:** If a day is missed, the app forces a choice:
 * **Restart:** Reset progress to Day 0.
 * **Continue:** Keep the count but apply a point penalty.
-
 
 * Visual progress bars for active challenges.
 
