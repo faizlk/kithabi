@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kithabi - Islamic Deed Evaluator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #059669; border-radius: 4px; }
+        
+        /* RTL/LTR Utility */
+        [dir="rtl"] { font-family: 'Amiri', serif; }
+        [dir="ltr"] { font-family: 'Inter', sans-serif; }
+        
+        .tab-active { border-bottom: 3px solid #059669; color: #059669; font-weight: bold; }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+        /* Chart Bars */
+        .chart-bar-bg { background-color: #e5e7eb; border-radius: 9999px; height: 8px; width: 100%; overflow: hidden; }
+        .chart-bar-fill { height: 100%; border-radius: 9999px; transition: width 1s ease-in-out; }
+        
+        /* Lock Screen Slide Animation */
+        #lockScreen { transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out; }
+        .slide-up { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+
+        /* Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #059669;
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+
+        /* Date Picker Customization */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col transition-colors duration-300">
+
+    <div id="webModal" class="fixed inset-0 z-[60] bg-white hidden flex flex-col">
+        <div class="bg-emerald-600 text-white p-3 flex justify-between items-center shadow-md z-10">
+            <h3 class="font-bold flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Daily Verses & Hadith
+            </h3>
+            <button onclick="toggleWebModal()" class="text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded text-sm font-bold transition">
+                Close
+            </button>
+        </div>
+        <div class="flex-grow bg-gray-100 relative">
+            <iframe src="https://www.tamililquran.com/" class="w-full h-full border-none" title="External Content"></iframe>
+            
+            <div class="absolute bottom-6 right-6 z-20">
+                <a href="https://www.tamililquran.com/" target="_blank" class="bg-emerald-600 text-white px-5 py-3 rounded-full shadow-xl text-sm font-bold flex items-center hover:bg-emerald-700 transition transform hover:scale-105">
+                    Open in Browser 
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="prayerModal" class="fixed inset-0 z-[50] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
+            <div class="bg-emerald-600 text-white p-4 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Prayer Schedule
+                    </h3>
+                    <p class="text-xs text-emerald-100" id="prayerModalDate">Loading...</p>
+                </div>
+                <button onclick="togglePrayerModal()" class="bg-emerald-700 hover:bg-emerald-800 p-1 rounded-full transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="p-4 bg-gray-50">
+                <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-3 mb-4 text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-widest" id="nextPrayerName">Next Prayer</p>
+                    <p class="text-2xl font-bold text-emerald-600 font-mono my-1" id="nextPrayerTime">--:--</p>
+                    <p class="text-xs text-gray-400" id="nextPrayerCountdown">--</p>
+                </div>
+
+                <div id="prayerListContainer" class="space-y-2">
+                    <p class="text-center text-gray-400 text-sm py-4">No Data. Please import CSV in Settings.</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-100 p-3 text-center text-xs text-gray-400">
+                 Times based on imported CSV
+            </div>
+        </div>
+    </div>
+
+    <div id="lockScreen" class="fixed inset-0 z-[100] bg-emerald-600 flex flex-col items-center justify-center p-4 text-white overflow-y-auto">
+        <div class="bg-white text-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-xs text-center my-auto">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold mb-1">Kithabi Locked</h2>
+            <p class="text-xs text-gray-500 mb-6">Please enter passcode to continue</p>
+            
+            <input type="password" id="unlockInput" placeholder="Passcode" class="w-full text-center text-2xl tracking-widest border-b-2 border-emerald-200 focus:border-emerald-600 outline-none py-2 mb-2" maxlength="8">
+            
+            <p id="lockHintDisplay" class="text-xs text-gray-400 mb-4">Hint: Default is 1234</p>
+            
+            <button onclick="attemptUnlock()" class="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-lg transform active:scale-95">
+                Unlock
+            </button>
+            <p id="unlockError" class="text-red-500 text-xs mt-3 hidden font-bold">Incorrect Passcode</p>
+        </div>
+    </div>
+
+    <header class="bg-white shadow-md sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                <div class="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight text-emerald-600" data-i18n="appName">Kithabi</h1>
+                    <p class="text-xs text-gray-500" data-i18n="appSubtitle">Daily Deed Evaluator</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="togglePrayerModal()" class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition" title="Prayer Times">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+
+                <a href="https://www.tamililquran.com/" target="_blank" class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition" title="Daily Verse">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </a>
+                
+                <button id="langToggle" class="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition">
+                    عربي
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-emerald-600 text-white py-2 px-2 relative overflow-hidden flex flex-col items-center justify-center">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMS41IiBvcGFjaXR5PSIwLjIiPjxwYXRoIGQ9Ik0xMCAwTDEwIDIwTTIyIDEwTDIgMTAiLz48L3N2Zz4=')]"></div>
+            
+            <p id="hijriDateDisplay" class="font-serif text-lg relative z-10 font-medium">Loading Date...</p>
+            
+            <div class="relative z-10 flex items-center bg-emerald-700/50 rounded-full px-2 py-1 mt-1 space-x-2 rtl:space-x-reverse">
+                <button onclick="changeDate(-1)" class="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <input type="date" id="dateNavigator" onchange="setDate(this.value)" class="bg-transparent border-none text-white text-xs font-bold outline-none text-center w-24 cursor-pointer">
+                <button onclick="changeDate(1)" class="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <nav class="flex justify-around bg-white border-b border-gray-200">
+            <button class="nav-btn flex-1 py-3 text-center text-sm uppercase tracking-wide tab-active" onclick="switchTab('home')" data-i18n="navHome">Today</button>
+            <button class="nav-btn flex-1 py-3 text-center text-sm uppercase tracking-wide text-gray-500 hover:text-emerald-600" onclick="switchTab('reports')" data-i18n="navReports">Reports</button>
+            <button class="nav-btn flex-1 py-3 text-center text-sm uppercase tracking-wide text-gray-500 hover:text-emerald-600" onclick="switchTab('settings')" data-i18n="navSettings">Settings</button>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-6 flex-grow pb-24">
+
+        <section id="home" class="fade-in space-y-6">
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-white p-3 rounded-lg shadow text-center border-t-4 border-emerald-600">
+                    <p class="text-xs text-gray-500 uppercase" data-i18n="scoreToday">Daily Score</p>
+                    <p class="text-2xl font-bold text-emerald-600" id="scoreTodayVal">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow text-center border-t-4 border-amber-600">
+                    <p class="text-xs text-gray-500 uppercase" data-i18n="scoreYesterday">Yesterday</p>
+                    <p class="text-2xl font-bold text-amber-600" id="scoreYesterdayVal">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow text-center border-t-4 border-blue-500">
+                    <p class="text-xs text-gray-500 uppercase" data-i18n="scoreWeek">This Week</p>
+                    <p class="text-2xl font-bold text-blue-500" id="scoreWeekVal">0</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow text-center border-t-4 border-purple-500">
+                    <p class="text-xs text-gray-500 uppercase" data-i18n="scoreMonth">This Month</p>
+                    <p class="text-2xl font-bold text-purple-500" id="scoreMonthVal">0</p>
+                </div>
+            </div>
+
+            <div id="remindersBox" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3 rtl:space-x-reverse">
+                <svg class="w-6 h-6 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <h3 class="font-bold text-yellow-800 text-sm" data-i18n="upcomingReminders">Upcoming Reminders</h3>
+                    <ul id="remindersList" class="text-sm text-yellow-700 mt-1 list-disc list-inside"></ul>
+                </div>
+            </div>
+
+            <div id="deedsContainer" class="space-y-6">
+            </div>
+
+            <button onclick="saveData()" class="fixed bottom-6 right-6 md:right-1/2 md:translate-x-1/2 bg-emerald-600 hover:bg-green-700 text-white rounded-full p-4 shadow-lg z-30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span class="ml-2 font-bold hidden md:inline" data-i18n="saveProgress">Save Progress</span>
+            </button>
+
+        </section>
+
+        <section id="reports" class="hidden fade-in space-y-6">
+            
+            <div class="bg-white rounded-lg shadow p-5 border-t-4 border-amber-500">
+                <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 rtl:ml-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span>Active Challenges</span>
+                </h2>
+                <div id="challengeSummaryList" class="space-y-4">
+                    </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 rtl:ml-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <span data-i18n="performanceReport">Performance Report</span>
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span data-i18n="today">Daily Score</span>
+                            <span id="reportTodayScore" class="font-bold">0</span>
+                        </div>
+                        <div class="chart-bar-bg"><div id="barToday" class="chart-bar-fill bg-emerald-600" style="width: 0%"></div></div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span data-i18n="week">This Week</span>
+                            <span id="reportWeekScore" class="font-bold">0</span>
+                        </div>
+                        <div class="chart-bar-bg"><div id="barWeek" class="chart-bar-fill bg-amber-600" style="width: 0%"></div></div>
+                    </div>
+
+                     <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span data-i18n="month">This Month</span>
+                            <span id="reportMonthScore" class="font-bold">0</span>
+                        </div>
+                        <div class="chart-bar-bg"><div id="barMonth" class="chart-bar-fill bg-blue-500" style="width: 0%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <h3 class="font-bold text-gray-700 mb-3" data-i18n="history">History (Last 7 Days)</h3>
+                <div id="historyList" class="divide-y divide-gray-100">
+                </div>
+            </div>
+        </section>
+
+        <section id="settings" class="hidden fade-in space-y-6">
+            
+            <div class="bg-white rounded-lg shadow p-5 border-t-4 border-blue-500">
+                <h3 class="font-bold text-gray-700 mb-3 text-lg border-b pb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Prayer Schedule Source</span>
+                </h3>
+                <div class="space-y-3">
+                    <p class="text-sm text-gray-600">Import your annual CSV file to enable offline prayer times.<br>Format: <b>Date, Day, Fajr, Shuruq, Dhuha, Dhuhr, 'Asr, Maghrib, Isha</b></p>
+                    <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                        <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100
+                        "/>
+                        <button onclick="handleCSVImport()" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition">Import</button>
+                    </div>
+                    <p id="csvImportStatus" class="text-xs font-bold mt-1"></p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5 border-t-4 border-emerald-500">
+                <h3 class="font-bold text-gray-700 mb-3 text-lg border-b pb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span data-i18n="securitySettings">App Security</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 uppercase mb-1" data-i18n="changePasscode">New Passcode</label>
+                        <input type="text" id="newPasscodeInput" class="w-full border rounded p-2" placeholder="e.g. 1234">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 uppercase mb-1" data-i18n="changeHint">Passcode Hint</label>
+                        <input type="text" id="newHintInput" class="w-full border rounded p-2" placeholder="e.g. Birth Year">
+                    </div>
+                    <div class="md:col-span-2">
+                         <button onclick="saveSecuritySettings()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded w-full font-bold" data-i18n="updateSecurity">Update Security</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <h3 class="font-bold text-gray-700 mb-3 text-lg border-b pb-2" data-i18n="calendarSettings">Calendar Settings</h3>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="text-sm text-gray-600">
+                        <p data-i18n="adjustHijriInfo">Adjust Hijri date if it doesn't match your local sighting.</p>
+                    </div>
+                    <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                        <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button onclick="adjustHijri(-1)" class="p-2 hover:bg-gray-200 rounded w-8 h-8 flex items-center justify-center font-bold">-</button>
+                            <span id="hijriOffsetVal" class="mx-2 font-bold w-6 text-center">0</span>
+                            <button onclick="adjustHijri(1)" class="p-2 hover:bg-gray-200 rounded w-8 h-8 flex items-center justify-center font-bold">+</button>
+                        </div>
+                        
+                        <a href="https://www.acju.lk/calenders-en/" target="_blank" class="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition" title="Open ACJU Calendar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <h3 class="font-bold text-gray-700 mb-3 text-lg border-b pb-2" data-i18n="quranPlan">Quran Plan</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 uppercase mb-1" data-i18n="pagesPerDay">Pages per Day</label>
+                        <input type="number" id="quranPagesInput" class="w-full border rounded p-2" placeholder="e.g. 20" onkeyup="calcQuranCompletion()" onchange="calcQuranCompletion()">
+                        <p id="quranCompletionInfo" class="text-xs text-emerald-600 mt-2 font-medium"></p>
+                    </div>
+                    <div class="flex items-end">
+                         <button onclick="saveSettings()" class="bg-emerald-600 text-white px-4 py-2 rounded w-full" data-i18n="saveSettings">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="font-bold text-gray-700 text-lg" data-i18n="manageDeeds">Manage Deeds</h3>
+                    <button onclick="toggleDeedForm()" class="text-sm bg-emerald-600 text-white px-3 py-1 rounded hover:bg-green-700">+ <span data-i18n="addDeed">Add</span></button>
+                </div>
+
+                <div id="deedForm" class="hidden bg-gray-50 p-4 rounded border mb-4">
+                    <input type="hidden" id="editDeedId">
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex flex-col">
+                            <label class="text-xs text-gray-500 mb-1">Category Title (Group)</label>
+                            <select id="deedGroup" class="border p-2 rounded w-full bg-white" onchange="checkChallengeGroup(this.value)">
+                                <option value="Sala'th">Sala'th</option>
+                                <option value="Salathun Na'fila">Salathun Na'fila</option>
+                                <option value="As-Sawm">As-Sawm</option>
+                                <option value="Qathmul Quran">Qathmul Quran</option>
+                                <option value="Adhkar">Adhkar</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Challenges">Challenges</option>
+                                <option value="Avoid Misdeeds">Avoid Misdeeds (Rating)</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1">Name (English)</label>
+                                <input type="text" id="deedName" placeholder="e.g. Fajr" class="border p-2 rounded w-full">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1">Name (Arabic - Optional)</label>
+                                <input type="text" id="deedNameAr" placeholder="e.g. الفجر" class="border p-2 rounded w-full dir-rtl">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <select id="deedCategory" class="border p-2 rounded w-full">
+                                <option value="fard">Farḍ (+10/-10)</option>
+                                <option value="jamaah">Jama'ah (+27/+1/-10)</option>
+                                <option value="sunnah">Sunnah (+5/0)</option>
+                                <option value="sunnah_muakkadah">Sunnah Muakkadah (+8/-5)</option>
+                                <option value="fard_kifayah">Farḍ Kifayah (+10/0)</option>
+                                <option value="misdeed">Misdeed (Rating 0-10 -> 0-20pts)</option>
+                                <option value="challenge">Challenge (+10/Penalty)</option>
+                            </select>
+                            <select id="deedMode" class="border p-2 rounded w-full" onchange="updateDeedFormInputs()">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly_hijri">Monthly (Hijri)</option>
+                                <option value="yearly_hijri">Yearly (Hijri 1 Day)</option>
+                                <option value="others">Others (Non-Time Based)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="challengeSettingsBox" class="hidden bg-amber-50 p-3 rounded border border-amber-200 mt-2">
+                             <h4 class="text-xs font-bold text-amber-700 mb-2 uppercase">Challenge Config</h4>
+                             <div class="grid grid-cols-2 gap-3">
+                                 <div>
+                                     <label class="text-xs text-gray-500">Target Days</label>
+                                     <input type="number" id="chTarget" value="40" class="border p-1 rounded w-full text-sm">
+                                 </div>
+                                 <div>
+                                     <label class="text-xs text-gray-500">Missed Penalty</label>
+                                     <select id="chPenalty" class="border p-1 rounded w-full text-sm">
+                                         <option value="0">0 Points</option>
+                                         <option value="-5">-5 Points</option>
+                                     </select>
+                                 </div>
+                             </div>
+                        </div>
+
+                        <div class="border-t pt-2 mt-2">
+                            <label class="text-xs font-bold text-gray-600 mb-1 block">Exception (Optional)</label>
+                            <select id="deedExceptMode" class="border p-2 rounded w-full mb-2 text-sm" onchange="updateExceptInputs()">
+                                <option value="none">No Exception (Always Show)</option>
+                                <option value="month">Except Whole Month</option>
+                                <option value="date">Except Specific Date</option>
+                            </select>
+                            <div id="exceptContainer" class="hidden grid-cols-2 gap-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="repeatConfigContainer" class="mt-3"></div>
+
+                    <div class="mt-3 flex space-x-2 rtl:space-x-reverse">
+                        <button onclick="saveDeedFromForm()" class="bg-emerald-600 text-white px-4 py-2 rounded text-sm">Save</button>
+                        <button onclick="toggleDeedForm()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm">Cancel</button>
+                        <button id="deleteDeedBtn" onclick="deleteDeed()" class="bg-red-500 text-white px-4 py-2 rounded text-sm hidden">Delete</button>
+                    </div>
+                </div>
+
+                <div id="allDeedsList" class="max-h-64 overflow-y-auto space-y-2 text-sm">
+                </div>
+            </div>
+            
+            <div class="bg-red-50 border border-red-100 rounded-lg p-4 text-center">
+                <button onclick="resetAllData()" class="text-red-600 text-sm font-bold underline" data-i18n="resetData">Factory Reset App</button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        /* -------------------------------------------------------------------------- */
+        /* DATA STRUCTURES                              */
+        /* -------------------------------------------------------------------------- */
+        
+        const DEFAULTS = {
+            deeds: [
+                { id: 'fajr', group: "Sala'th", name: 'Fajr', nameAr: 'الفجر', category: 'jamaah', mode: 'daily' },
+                { id: 'dhuhr', group: "Sala'th", name: 'Dhuhr', nameAr: 'الظهر', category: 'jamaah', mode: 'daily' },
+                { id: 'asr', group: "Sala'th", name: 'Asr', nameAr: 'العصر', category: 'jamaah', mode: 'daily' },
+                { id: 'maghrib', group: "Sala'th", name: 'Maghrib', nameAr: 'المغرب', category: 'jamaah', mode: 'daily' },
+                { id: 'isha', group: "Sala'th", name: 'Isha', nameAr: 'العشاء', category: 'jamaah', mode: 'daily' },
+                { id: 'qathmul_quran', group: 'Qathmul Quran', name: 'Qathmul Quran', nameAr: 'ختم القرآن', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_fajr', group: "Salathun Na'fila", name: '2 before Fajr', nameAr: 'سنة الفجر', category: 'sunnah_muakkadah', mode: 'daily' },
+                { id: 'dhuha', group: "Salathun Na'fila", name: 'Azzhuha', nameAr: 'الضحى', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_dhuhr_pre2', group: "Salathun Na'fila", name: '2 before Dhuhr', nameAr: '٢ قبل الظهر', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_dhuhr_pre4', group: "Salathun Na'fila", name: '4 before Dhuhr', nameAr: '٤ قبل الظهر', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_dhuhr_post', group: "Salathun Na'fila", name: '2 after Dhuhr', nameAr: '٢ بعد الظهر', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_maghrib', group: "Salathun Na'fila", name: '2 after Maghrib', nameAr: '٢ بعد المغرب', category: 'sunnah', mode: 'daily' },
+                { id: 'sunnah_isha', group: "Salathun Na'fila", name: '2 after Isha', nameAr: '٢ بعد العشاء', category: 'sunnah', mode: 'daily' },
+                { id: 'qiyam', group: "Salathun Na'fila", name: 'Qiyamul Lail', nameAr: 'قيام الليل', category: 'sunnah', mode: 'daily' },
+                { id: 'witr', group: "Salathun Na'fila", name: 'Al Witr', nameAr: 'الوتر', category: 'sunnah_muakkadah', mode: 'daily' },
+                { id: 'eid_fitr', group: "Salathun Na'fila", name: 'Eid ul Fitr', nameAr: 'عيد الفطر', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '10-1' },
+                { id: 'eid_adha', group: "Salathun Na'fila", name: 'Eid ul Adha', nameAr: 'عيد الأضحى', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '12-10' },
+                { id: 'adhkar_wakeup', group: 'Adhkar', name: 'Wake up Adhkar', nameAr: 'أذكار الاستيقاظ', category: 'sunnah', mode: 'daily' },
+                { id: 'adhkar_morning', group: 'Adhkar', name: 'Morning Adhkar', nameAr: 'أذكار الصباح', category: 'sunnah', mode: 'daily' },
+                { id: 'adhkar_evening', group: 'Adhkar', name: 'Evening Adhkar', nameAr: 'أذكار المساء', category: 'sunnah', mode: 'daily' },
+                { id: 'adhkar_sleep', group: 'Adhkar', name: 'Sleeping Adhkar', nameAr: 'أذكار النوم', category: 'sunnah', mode: 'daily' },
+                { id: 'istighfar', group: 'Daily', name: 'Istighfar', nameAr: 'الاستغفار', category: 'sunnah', mode: 'daily' },
+                { id: 'salawat', group: 'Daily', name: 'Salawathul Ibraheemiyyah', nameAr: 'الصلاة الإبراهيمية', category: 'sunnah', mode: 'daily' },
+                { id: 'wudu_sleep', group: 'Daily', name: 'Wudu before sleep', nameAr: 'الوضوء قبل النوم', category: 'sunnah', mode: 'daily' },
+                { id: 'friday_bath', group: 'Daily', name: 'Friday Bathing', nameAr: 'غسل الجمعة', category: 'sunnah', mode: 'weekly', repeat: [5] },
+                { id: 'kahf', group: 'Daily', name: 'Surah Kahf', nameAr: 'سورة الكهف', category: 'sunnah', mode: 'weekly', repeat: [5] },
+                { id: 'jummah_early', group: 'Daily', name: 'Get early to Jummah', nameAr: 'التبكير للجمعة', category: 'sunnah_muakkadah', mode: 'weekly', repeat: [5] },
+                { id: 'zakat_fitr', group: 'Others', name: 'Zakathul Fithr', nameAr: 'زكاة الفطر', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '9-30' },
+                { id: 'fasting_ramadan', group: 'As-Sawm', name: 'Ramadan Fasting', nameAr: 'صيام رمضان', category: 'fard', mode: 'yearly_hijri_range', repeat: {month: 9, start: 1, end: 30} },
+                { id: 'fasting_mon', group: 'As-Sawm', name: 'Monday Fasting', nameAr: 'صيام الاثنين', category: 'sunnah', mode: 'weekly', repeat: [1] },
+                { id: 'fasting_thu', group: 'As-Sawm', name: 'Thursday Fasting', nameAr: 'صيام الخميس', category: 'sunnah', mode: 'weekly', repeat: [4] },
+                { id: 'ayyam_beed_13', group: 'As-Sawm', name: 'Ayyamul Beed (13th)', nameAr: 'الأيام البيض ١٣', category: 'sunnah', mode: 'monthly_hijri', repeat: 13 },
+                { id: 'ayyam_beed_14', group: 'As-Sawm', name: 'Ayyamul Beed (14th)', nameAr: 'الأيام البيض ١٤', category: 'sunnah', mode: 'monthly_hijri', repeat: 14 },
+                { id: 'ayyam_beed_15', group: 'As-Sawm', name: 'Ayyamul Beed (15th)', nameAr: 'الأيام البيض ١٥', category: 'sunnah', mode: 'monthly_hijri', repeat: 15 },
+                { id: 'fasting_arafa', group: 'As-Sawm', name: 'Arafa Fasting', nameAr: 'صيام عرفة', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '12-9' },
+                { id: 'fasting_ashura_9', group: 'As-Sawm', name: 'Muharram 9th', nameAr: 'صيام ٩ محرم', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '1-9' },
+                { id: 'fasting_ashura_10', group: 'As-Sawm', name: 'Muharram 10th', nameAr: 'صيام ١٠ محرم', category: 'sunnah_muakkadah', mode: 'yearly_hijri', repeat: '1-10' },
+                { id: 'fasting_dhul_hijjah', group: 'As-Sawm', name: 'Thul Haj Fasting (1-9)', nameAr: 'صيام ذي الحجة', category: 'sunnah_muakkadah', mode: 'yearly_hijri_range', repeat: {month: 12, start: 1, end: 9} },
+                { id: 'ch_nofap', group: 'Challenges', name: 'No Fap Challenge', nameAr: 'تحدي غض البصر', category: 'challenge', mode: 'daily', challenge: { target: 45, penalty: -5, startDate: null } },
+                { id: 'ch_nomobile', group: 'Challenges', name: 'No Mobile Challenge', nameAr: 'تحدي ترك الهاتف', category: 'challenge', mode: 'daily', challenge: { target: 30, penalty: 0, startDate: null } },
+                { id: 'ch_nomusic', group: 'Challenges', name: 'No Music Challenge', nameAr: 'تحدي ترك الموسيقى', category: 'challenge', mode: 'daily', challenge: { target: 40, penalty: -5, startDate: null } },
+                { id: 'avoid_anger', group: 'Avoid Misdeeds', name: 'Controlling Anger', nameAr: 'كظم الغيظ', category: 'misdeed', mode: 'daily' },
+                { id: 'avoid_lying', group: 'Avoid Misdeeds', name: 'Avoiding Lying', nameAr: 'تجنب الكذب', category: 'misdeed', mode: 'daily' },
+                { id: 'avoid_wasting_time', group: 'Avoid Misdeeds', name: 'Not Wasting Time', nameAr: 'حفظ الوقت', category: 'misdeed', mode: 'daily' },
+                { id: 'sadaqah', group: 'Others', name: 'Sadaqah', nameAr: 'الصدقة', category: 'sunnah', mode: 'others' },
+                { id: 'visit_family', group: 'Others', name: 'Visiting Families', nameAr: 'صلة الرحم', category: 'sunnah', mode: 'others' },
+                { id: 'visit_sick', group: 'Others', name: 'Visiting Patient', nameAr: 'زيارة المريض', category: 'sunnah', mode: 'others' },
+                { id: 'fasting_shawwal', group: 'Others', name: 'Shawwal Fasting (Any 6 Days)', nameAr: 'ست من شوال', category: 'sunnah', mode: 'others' }
+            ],
+            settings: {
+                lang: 'en',
+                hijriOffset: 0,
+                quranPages: 20,
+                passcode: '1234',
+                passcodeHint: 'Default is 1234',
+                challenges: {} 
+            }
+        };
+
+        const POINTS = {
+            fard: { done: 10, missed: -10 },
+            jamaah: { done_jamaah: 27, done_alone: 1, missed: -10 },
+            sunnah: { done: 5, missed: 0 },
+            sunnah_muakkadah: { done: 8, missed: -5 },
+            fard_kifayah: { done: 10, missed: 0 },
+            misdeed: { max: 20 },
+            challenge: { done: 10 } 
+        };
+        
+        const TRANSLATIONS = {
+            en: {
+                appName: "Kithabi",
+                appSubtitle: "Daily Deed Evaluator",
+                navHome: "Today",
+                navReports: "Reports",
+                navSettings: "Settings",
+                scoreToday: "Daily Score",
+                scoreYesterday: "Yesterday",
+                scoreWeek: "This Week",
+                scoreMonth: "This Month",
+                upcomingReminders: "Reminders (Tomorrow)",
+                saveProgress: "Save Progress",
+                performanceReport: "Performance Report",
+                today: "Daily Score",
+                week: "Week",
+                month: "Month",
+                history: "History (Last 7 Days)",
+                calendarSettings: "Calendar Settings",
+                adjustHijriInfo: "Adjust Hijri date if necessary.",
+                quranPlan: "Quran Plan",
+                pagesPerDay: "Pages per Day",
+                saveSettings: "Save Settings",
+                manageDeeds: "Manage Deeds",
+                addDeed: "Add",
+                resetData: "Factory Reset App",
+                lblPoints: "pts",
+                quranCompleteMsg: "You will complete the Quran in approx. {days} days.",
+                lblJamaah: "Jama'ah",
+                lblAlone: "Alone",
+                lblMissed: "Missed",
+                securitySettings: "App Security",
+                changePasscode: "New Passcode",
+                changeHint: "Passcode Hint",
+                updateSecurity: "Update Security",
+                avoidRating: "Rating (0-10)",
+                confirmResetTitle: "Streak Broken!",
+                confirmResetMsg: "Do you want to RESTART the challenge from Day 1, or CONTINUE counting but lose points for today?",
+                btnRestart: "Restart",
+                btnContinue: "Continue",
+                activeChallenges: "Active Challenges"
+            },
+            ar: {
+                appName: "كتابي",
+                appSubtitle: "تقييم الأعمال اليومية",
+                navHome: "اليوم",
+                navReports: "التقارير",
+                navSettings: "الإعدادات",
+                scoreToday: "النقاط اليومية",
+                scoreYesterday: "الأمس",
+                scoreWeek: "هذا الأسبوع",
+                scoreMonth: "هذا الشهر",
+                upcomingReminders: "تذكير (غداً)",
+                saveProgress: "حفظ التقدم",
+                performanceReport: "تقرير الأداء",
+                today: "اليوم",
+                week: "الأسبوع",
+                month: "الشهر",
+                history: "سجل (آخر 7 أيام)",
+                calendarSettings: "إعدادات التقويم",
+                adjustHijriInfo: "تعديل التاريخ الهجري حسب الرؤية.",
+                quranPlan: "خطة القرآن",
+                pagesPerDay: "صفحة في اليوم",
+                saveSettings: "حفظ الإعدادات",
+                manageDeeds: "إدارة الأعمال",
+                addDeed: "إضافة",
+                resetData: "إعادة ضبط المصنع",
+                lblPoints: "نقطة",
+                quranCompleteMsg: "ستختم القرآن خلال {days} يوماً تقريباً.",
+                lblJamaah: "جماعة",
+                lblAlone: "منفرداً",
+                lblMissed: "فاتتني",
+                securitySettings: "أمان التطبيق",
+                changePasscode: "رمز مرور جديد",
+                changeHint: "تلميح رمز المرور",
+                updateSecurity: "تحديث الأمان",
+                avoidRating: "التقييم (0-10)",
+                confirmResetTitle: "انقطع التتابع!",
+                confirmResetMsg: "هل تريد إعادة التحدي من اليوم الأول، أم المتابعة مع خصم نقاط اليوم؟",
+                btnRestart: "إعادة البدء",
+                btnContinue: "متابعة",
+                activeChallenges: "التحديات النشطة"
+            }
+        };
+
+        /* -------------------------------------------------------------------------- */
+        /* STATE MANAGEMENT                             */
+        /* -------------------------------------------------------------------------- */
+        
+        let state = {
+            deeds: [],
+            logs: {}, 
+            settings: {},
+            viewDate: '',
+            prayerSchedule: [] // Array of { date: 'YYYY-MM-DD', fajr: '...', etc }
+        };
+
+        const getTodayKey = () => {
+            return state.viewDate;
+        };
+
+        function init() {
+            state.viewDate = new Date().toISOString().split('T')[0];
+            document.getElementById('dateNavigator').value = state.viewDate;
+            
+            loadData();
+            
+            // Auto-load Online Schedule
+            loadOnlineSchedule();
+            
+            applyTheme();
+            renderHijriDate();
+            calcQuranCompletion();
+            renderHome();
+            renderSettingsList();
+            
+            // Lock Screen Init
+            document.getElementById('lockHintDisplay').innerText = "Hint: " + (state.settings.passcodeHint || 'Default is 1234');
+            document.getElementById('unlockInput').focus();
+        }
+
+        function loadData() {
+            const storedDeeds = localStorage.getItem('muhasaba_deeds');
+            const storedLogs = localStorage.getItem('muhasaba_logs');
+            const storedSettings = localStorage.getItem('muhasaba_settings');
+            const storedSchedule = localStorage.getItem('muhasaba_prayers');
+
+            state.deeds = storedDeeds ? JSON.parse(storedDeeds) : [...DEFAULTS.deeds];
+            state.logs = storedLogs ? JSON.parse(storedLogs) : {};
+            state.settings = storedSettings ? JSON.parse(storedSettings) : {...DEFAULTS.settings};
+            state.prayerSchedule = storedSchedule ? JSON.parse(storedSchedule) : [];
+
+            const hasChallenges = state.deeds.some(d => d.group === 'Challenges');
+            if(!hasChallenges) {
+                const challenges = DEFAULTS.deeds.filter(d => d.group === 'Challenges');
+                state.deeds.push(...challenges);
+            }
+
+            if(state.settings.hijriOffset === undefined || state.settings.hijriOffset === null) state.settings.hijriOffset = 0;
+            if(!state.settings.lang) state.settings.lang = 'en';
+            if(!state.settings.passcode) state.settings.passcode = '1234';
+            if(!state.settings.challenges) state.settings.challenges = {};
+        }
+
+        function saveData() {
+            localStorage.setItem('muhasaba_deeds', JSON.stringify(state.deeds));
+            localStorage.setItem('muhasaba_logs', JSON.stringify(state.logs));
+            localStorage.setItem('muhasaba_settings', JSON.stringify(state.settings));
+            localStorage.setItem('muhasaba_prayers', JSON.stringify(state.prayerSchedule));
+            updateStats();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* PRAYER TIMES CSV LOGIC                       */
+        /* -------------------------------------------------------------------------- */
+        
+        async function loadOnlineSchedule() {
+            try {
+                // 'prayers.csv' refers to the file in the same GitHub folder
+                const response = await fetch('./prayers.csv'); 
+                
+                if (!response.ok) {
+                    console.log("No default CSV found on server.");
+                    return;
+                }
+
+                const csvText = await response.text();
+                const parsed = parseCSV(csvText);
+
+                if (parsed && parsed.length > 0) {
+                    state.prayerSchedule = parsed;
+                    saveData(); // Save to phone memory
+                    
+                    const status = document.getElementById('csvImportStatus');
+                    if(status) {
+                        status.innerText = "Auto-synced with GitHub data.";
+                        status.className = "text-xs font-bold mt-1 text-green-600";
+                    }
+                    renderPrayerModal();
+                    console.log("Prayer times updated from GitHub!");
+                }
+            } catch (error) {
+                console.log("Offline mode: Using saved data.");
+            }
+        }
+
+        function handleCSVImport() {
+            const input = document.getElementById('csvFileInput');
+            const file = input.files[0];
+            const status = document.getElementById('csvImportStatus');
+            
+            if (!file) {
+                status.innerText = "Please select a file first.";
+                status.className = "text-xs font-bold mt-1 text-red-500";
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                try {
+                    const parsed = parseCSV(text);
+                    if (parsed && parsed.length > 0) {
+                        state.prayerSchedule = parsed;
+                        saveData();
+                        status.innerText = `Success! Loaded ${parsed.length} days.`;
+                        status.className = "text-xs font-bold mt-1 text-green-600";
+                    } else {
+                        throw new Error("No valid data found.");
+                    }
+                } catch (err) {
+                    status.innerText = "Error parsing CSV. Check format.";
+                    status.className = "text-xs font-bold mt-1 text-red-500";
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Smart CSV Parser
+        function parseCSV(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) return null;
+            
+            // Simple heuristics to find columns
+            const header = lines[0].toLowerCase().split(',');
+            // Default map based on request: Date, Day, Fajr, Shuruq, Dhuha, Dhuhr, 'Asr, Maghrib, Isha
+            const map = { date: -1, fajr: -1, sunrise: -1, dhuha: -1, dhuhr: -1, asr: -1, maghrib: -1, isha: -1 };
+            
+            header.forEach((col, idx) => {
+                const c = col.trim();
+                if(c.includes('date') || c.includes('day') && idx === 0) map.date = idx;
+                else if(c.includes('fajr')) map.fajr = idx;
+                else if(c.includes('sunrise') || c.includes('shuruq')) map.sunrise = idx;
+                else if(c.includes('dhuha')) map.dhuha = idx;
+                else if(c.includes('dhuhr') || c.includes('zuhr')) map.dhuhr = idx;
+                else if(c.includes('asr')) map.asr = idx;
+                else if(c.includes('maghrib')) map.maghrib = idx;
+                else if(c.includes('isha')) map.isha = idx;
+            });
+
+            // If headers not strictly found, enforce the requested index order
+            // Date(0), Day(1), Fajr(2), Shuruq(3), Dhuha(4), Dhuhr(5), 'Asr(6), Maghrib(7), Isha(8)
+            if (map.fajr === -1) { 
+                 map.date=0; map.fajr=2; map.sunrise=3; map.dhuha=4; map.dhuhr=5; map.asr=6; map.maghrib=7; map.isha=8;
+            }
+
+            const result = [];
+            const currentYear = new Date().getFullYear();
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(',');
+                if (row.length < 5) continue;
+                
+                // Parse Date. Try to make it YYYY-MM-DD
+                let dateStr = row[map.date] ? row[map.date].trim() : '';
+                // If date is "1-Jan", add year
+                if (dateStr && !dateStr.match(/\d{4}/)) {
+                    dateStr = dateStr + "-" + currentYear;
+                }
+                const dObj = new Date(dateStr);
+                if (isNaN(dObj)) continue;
+                
+                const yyyy = dObj.getFullYear();
+                const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(dObj.getDate()).padStart(2, '0');
+                const isoDate = `${yyyy}-${mm}-${dd}`;
+
+                result.push({
+                    date: isoDate,
+                    Fajr: cleanTime(row[map.fajr]),
+                    Sunrise: cleanTime(row[map.sunrise]),
+                    Dhuha: map.dhuha !== -1 ? cleanTime(row[map.dhuha]) : '--:--',
+                    Dhuhr: cleanTime(row[map.dhuhr]),
+                    Asr: cleanTime(row[map.asr]),
+                    Maghrib: cleanTime(row[map.maghrib]),
+                    Isha: cleanTime(row[map.isha])
+                });
+            }
+            return result;
+        }
+
+        function cleanTime(t) {
+            if(!t) return '--:--';
+            return t.trim().replace(/"/g, ''); 
+        }
+
+        function togglePrayerModal() {
+            const m = document.getElementById('prayerModal');
+            m.classList.toggle('hidden');
+            if(!m.classList.contains('hidden')) {
+                renderPrayerModal();
+            }
+        }
+
+        function renderPrayerModal() {
+            const dateStr = state.viewDate;
+            const sched = state.prayerSchedule.find(s => s.date === dateStr);
+            const list = document.getElementById('prayerListContainer');
+            const headerDate = document.getElementById('prayerModalDate');
+            
+            headerDate.innerText = new Date(dateStr).toDateString();
+            list.innerHTML = '';
+            
+            if(!sched) {
+                list.innerHTML = `<p class="text-center text-gray-500 py-6 text-sm">No prayer times found for this date.<br>Please import a valid CSV in settings.</p>`;
+                document.getElementById('nextPrayerTime').innerText = "--:--";
+                document.getElementById('nextPrayerCountdown').innerText = "";
+                return;
+            }
+            
+            // Render list - Added Dhuha here
+            const prayers = ['Fajr', 'Sunrise', 'Dhuha', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+            let nextP = null;
+            const now = new Date(); // Real time for highlighting "Next"
+            const isToday = (dateStr === now.toISOString().split('T')[0]);
+            
+            // Logic to find next prayer
+            let minDiff = Infinity;
+            
+            prayers.forEach(p => {
+                const time = sched[p];
+                if (!time || time === '--:--') return;
+
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center p-3 rounded border border-gray-100 bg-white shadow-sm";
+                
+                let isNext = false;
+                
+                if (isToday) {
+                    // Calc Diff
+                    const [h, m] = time.split(':').map(Number);
+                    
+                    if (!isNaN(h)) {
+                        let pDate = new Date();
+                        pDate.setHours(h, m, 0);
+                        
+                        // Simple AM/PM fix if hours < 12 and it's Asr/Maghrib/Isha/Dhuhr(rarely)
+                        // Heuristic: if p is Asr, Maghrib, Isha and hour is small, add 12.
+                        // Dhuhr is tricky (11am vs 12pm vs 1pm). Usually Dhuhr is PM unless very early.
+                        if ((p === 'Asr' || p === 'Maghrib' || p === 'Isha') && h < 12) {
+                            pDate.setHours(h+12);
+                        }
+                        if (p === 'Dhuhr' && h < 11) { // If Dhuhr is stored as '1:30' instead of '13:30'
+                             pDate.setHours(h+12);
+                        }
+                        
+                        if (pDate > now) {
+                            const diff = pDate - now;
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                nextP = { name: p, time: time, diff: diff };
+                                isNext = true;
+                            }
+                        }
+                    }
+                }
+                
+                if (isNext) row.classList.add('border-emerald-500', 'bg-emerald-50');
+
+                row.innerHTML = `
+                    <span class="font-bold text-gray-700 ${isNext?'text-emerald-700':''}">${p}</span>
+                    <span class="font-mono text-gray-600 ${isNext?'text-emerald-700 font-bold':''}">${time}</span>
+                `;
+                list.appendChild(row);
+            });
+            
+            // Update Top Box
+            if (nextP) {
+                document.getElementById('nextPrayerName').innerText = "Next: " + nextP.name;
+                document.getElementById('nextPrayerTime').innerText = nextP.time;
+                
+                // Countdown text
+                const hrs = Math.floor(nextP.diff / 3600000);
+                const mins = Math.floor((nextP.diff % 3600000) / 60000);
+                document.getElementById('nextPrayerCountdown').innerText = `in ${hrs}h ${mins}m`;
+            } else {
+                 document.getElementById('nextPrayerName').innerText = "All Prayers Done";
+                 document.getElementById('nextPrayerTime').innerText = "✅";
+                 document.getElementById('nextPrayerCountdown').innerText = "";
+            }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* LOCK SCREEN LOGIC                            */
+        /* -------------------------------------------------------------------------- */
+        
+        function attemptUnlock() {
+            const input = document.getElementById('unlockInput').value;
+            const errorMsg = document.getElementById('unlockError');
+            
+            if(input === state.settings.passcode) {
+                document.getElementById('lockScreen').classList.add('slide-up');
+                errorMsg.classList.add('hidden');
+            } else {
+                errorMsg.classList.remove('hidden');
+                document.getElementById('unlockInput').value = '';
+                document.getElementById('unlockInput').focus();
+            }
+        }
+        
+        document.getElementById('unlockInput').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                attemptUnlock();
+            }
+        });
+
+        function saveSecuritySettings() {
+            const newPass = document.getElementById('newPasscodeInput').value;
+            const newHint = document.getElementById('newHintInput').value;
+            if(newPass) state.settings.passcode = newPass;
+            if(newHint) state.settings.passcodeHint = newHint;
+            saveData();
+            const msgBox = document.createElement('div');
+            msgBox.className = "fixed top-5 right-5 bg-gray-800 text-white p-3 rounded-lg shadow-xl fade-in z-50";
+            msgBox.innerText = "Security Settings Updated!";
+            document.body.appendChild(msgBox);
+            setTimeout(() => msgBox.remove(), 2000);
+            document.getElementById('newPasscodeInput').value = '';
+            document.getElementById('newHintInput').value = '';
+        }
+        
+        function toggleWebModal() {
+            document.getElementById('webModal').classList.toggle('hidden');
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* DATE & HIJRI LOGIC                           */
+        /* -------------------------------------------------------------------------- */
+        
+        function changeDate(offset) {
+            const d = new Date(state.viewDate);
+            d.setDate(d.getDate() + offset);
+            state.viewDate = d.toISOString().split('T')[0];
+            document.getElementById('dateNavigator').value = state.viewDate;
+            renderHijriDate();
+            renderHome();
+        }
+
+        function setDate(val) {
+            if(val) {
+                state.viewDate = val;
+                renderHijriDate();
+                renderHome();
+            }
+        }
+
+        function getHijriDate(date, offset = 0) {
+            let d = new Date(date);
+            d.setDate(d.getDate() + parseInt(offset));
+            const uCal = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {
+                day: 'numeric', month: 'numeric', year: 'numeric'
+            }).formatToParts(d);
+            const hDay = parseInt(uCal.find(p => p.type === 'day').value);
+            const hMonth = parseInt(uCal.find(p => p.type === 'month').value);
+            const hYear = parseInt(uCal.find(p => p.type === 'year').value);
+            return { day: hDay, month: hMonth, year: hYear };
+        }
+
+        function getHijriMonthName(monthIdx, lang) {
+            const ar = ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"];
+            const en = ["Muharram", "Safar", "Rabi Al-Awwal", "Rabi Al-Thani", "Jumada Al-Awwal", "Jumada Al-Thani", "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhul Qi'dah", "Dhul Hijjah"];
+            return lang === 'ar' ? ar[monthIdx-1] : en[monthIdx-1];
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* CORE LOGIC                                   */
+        /* -------------------------------------------------------------------------- */
+        
+        function getRelevantDeeds(dateObj, hijriObj) {
+            const dayOfWeek = dateObj.getDay();
+            const isRamadan = hijriObj.month === 9;
+            let relevant = state.deeds.filter(deed => {
+                if (deed.except) {
+                    if (deed.except.mode === 'month' && parseInt(deed.except.month) === hijriObj.month) return false;
+                    if (deed.except.mode === 'date' && parseInt(deed.except.month) === hijriObj.month && parseInt(deed.except.day) === hijriObj.day) return false;
+                }
+                if (deed.mode === 'daily') return true;
+                if (deed.mode === 'weekly') return Array.isArray(deed.repeat) && deed.repeat.includes(dayOfWeek);
+                if (deed.mode === 'monthly_hijri') return parseInt(deed.repeat) === hijriObj.day;
+                if (deed.mode === 'yearly_hijri') {
+                    const [m, d] = String(deed.repeat).split('-').map(Number);
+                    return m === hijriObj.month && d === hijriObj.day;
+                }
+                if (deed.mode === 'yearly_hijri_range') {
+                    if (deed.repeat && typeof deed.repeat === 'object') {
+                        return hijriObj.month === deed.repeat.month && hijriObj.day >= deed.repeat.start && hijriObj.day <= deed.repeat.end;
+                    }
+                }
+                if (deed.mode === 'others') return true;
+                return false;
+            });
+            relevant = relevant.map(d => ({...d}));
+            if (isRamadan) {
+                relevant.forEach(d => {
+                    if (d.id === 'qiyam' || d.id === 'witr') {
+                        d.category = 'jamaah';
+                        d.name = d.name + " (Jama'ah)";
+                    }
+                });
+            }
+            return relevant;
+        }
+
+        function calculatePoints(dateKey) {
+            if (!state.logs[dateKey]) return 0;
+            const log = state.logs[dateKey];
+            let score = 0;
+            const d = new Date(dateKey);
+            const hijri = getHijriDate(d, state.settings.hijriOffset);
+            const relevantDeeds = getRelevantDeeds(d, hijri);
+            relevantDeeds.forEach(deed => {
+                const status = log[deed.id];
+                const pts = POINTS[deed.category];
+                if(!pts) return;
+                if (deed.category === 'misdeed') {
+                    const rating = parseInt(status) || 0;
+                    score += (rating * 2);
+                } else if (deed.category === 'challenge') {
+                    if (status === 'done') score += pts.done;
+                    else if (status === 'missed') score += (deed.challenge.penalty || 0);
+                } else if (deed.category === 'jamaah') {
+                    if (status === 'done_jamaah') score += pts.done_jamaah;
+                    else if (status === 'done_alone') score += pts.done_alone;
+                    else if (status === 'missed') score += pts.missed;
+                } else {
+                    if (status === 'done') score += pts.done;
+                    else if (status === 'missed') score += pts.missed;
+                }
+            });
+            return score;
+        }
+
+        function getChallengeDays(deedId, startDateStr) {
+            if (!startDateStr) return 0;
+            const start = new Date(startDateStr);
+            const logs = state.logs;
+            let count = 0;
+            Object.keys(logs).forEach(dateKey => {
+                const d = new Date(dateKey);
+                if (d >= start && logs[dateKey][deedId] === 'done') count++;
+            });
+            return count;
+        }
+
+        function handleChallengeMissed(deedId) {
+            const t = TRANSLATIONS[state.settings.lang];
+            if (confirm(t.confirmResetMsg)) {
+                delete state.settings.challenges[deedId];
+                markDeedDirect(deedId, 'missed');
+            } else {
+                markDeedDirect(deedId, 'missed');
+            }
+        }
+
+        function markDeed(id, status) {
+            const deed = state.deeds.find(d => d.id === id);
+            if (deed && deed.category === 'challenge') {
+                if (status === 'missed') {
+                     if (state.settings.challenges[id]) {
+                         handleChallengeMissed(id);
+                         return;
+                     }
+                } else if (status === 'done') {
+                    if (!state.settings.challenges[id]) {
+                        state.settings.challenges[id] = state.viewDate; 
+                    }
+                }
+            }
+            markDeedDirect(id, status);
+        }
+
+        function markDeedDirect(id, status) {
+            const key = getTodayKey();
+            if (!state.logs[key]) state.logs[key] = {};
+            if (state.logs[key][id] === status) delete state.logs[key][id]; 
+            else state.logs[key][id] = status;
+            saveData();
+            renderHome();
+        }
+        
+        function rateDeed(id, val) {
+            const key = getTodayKey();
+            if (!state.logs[key]) state.logs[key] = {};
+            state.logs[key][id] = val;
+            saveData();
+            updateStats();
+            document.getElementById(`valDisplay_${id}`).innerText = val + "/10";
+            document.getElementById(`scoreDisplay_${id}`).innerText = "+" + (val * 2) + " pts";
+        }
+
+        function calcQuranCompletion() {
+            const pages = parseInt(document.getElementById('quranPagesInput').value) || 0;
+            const info = document.getElementById('quranCompletionInfo');
+            const t = TRANSLATIONS[state.settings.lang];
+            if (pages > 0) {
+                const days = Math.ceil(604 / pages); 
+                info.innerText = t.quranCompleteMsg.replace('{days}', days);
+            } else {
+                info.innerText = "";
+            }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* RENDER UI                                    */
+        /* -------------------------------------------------------------------------- */
+
+        function renderHijriDate() {
+            const h = getHijriDate(state.viewDate, state.settings.hijriOffset);
+            const mName = getHijriMonthName(h.month, state.settings.lang);
+            const locale = state.settings.lang === 'ar' ? 'ar-u-ca-gregory' : 'en-US';
+            const enDate = new Date(state.viewDate).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'short' });
+            const text = `${h.day} ${mName} ${h.year} AH | ${enDate}`;
+            document.getElementById('hijriDateDisplay').innerText = text;
+        }
+
+        function renderHome() {
+            const container = document.getElementById('deedsContainer');
+            container.innerHTML = '';
+            
+            const todayDate = new Date(state.viewDate); 
+            const todayKey = getTodayKey();
+            const log = state.logs[todayKey] || {};
+            const hijri = getHijriDate(todayDate, state.settings.hijriOffset);
+            const deeds = getRelevantDeeds(todayDate, hijri);
+            const t = TRANSLATIONS[state.settings.lang];
+            const isAr = state.settings.lang === 'ar';
+
+            const grouped = {};
+            const groupOrder = ["Sala'th", "Salathun Na'fila", "As-Sawm", "Qathmul Quran", "Adhkar", "Daily", "Challenges", "Avoid Misdeeds", "Others"];
+            
+            deeds.forEach(d => {
+                if (!grouped[d.group]) grouped[d.group] = [];
+                grouped[d.group].push(d);
+            });
+            
+            const sortedGroups = Object.keys(grouped).sort((a,b) => {
+                let idxA = groupOrder.indexOf(a);
+                let idxB = groupOrder.indexOf(b);
+                if (idxA === -1) idxA = 999;
+                if (idxB === -1) idxB = 999;
+                return idxA - idxB;
+            });
+
+            sortedGroups.forEach(groupName => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = "bg-white rounded-lg shadow overflow-hidden";
+                const header = document.createElement('div');
+                header.className = "bg-gray-100 px-4 py-3 font-bold text-gray-700 border-b flex justify-between items-center cursor-pointer hover:bg-gray-200 transition";
+                header.innerHTML = `<span>${groupName}</span>`;
+                const list = document.createElement('div');
+                list.className = "deed-list divide-y divide-gray-100";
+                header.onclick = () => list.classList.toggle('hidden');
+
+                grouped[groupName].forEach(deed => {
+                    let importanceColor = '';
+                    if (deed.category === 'fard' || deed.category === 'jamaah') importanceColor = 'border-l-4 border-red-500';
+                    else if (deed.category === 'sunnah_muakkadah') importanceColor = 'border-l-4 border-amber-600';
+                    else if (deed.category === 'misdeed') importanceColor = 'border-l-4 border-purple-500';
+                    else if (deed.category === 'challenge') importanceColor = 'border-l-4 border-amber-500';
+
+                    const item = document.createElement('div');
+                    item.className = `p-3 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition ${importanceColor}`;
+                    const status = log[deed.id];
+                    let ptDisplay = '';
+                    const pts = POINTS[deed.category];
+
+                    if (deed.category === 'challenge') {
+                        if(status === 'done') ptDisplay = `+${pts.done}`;
+                        else if(status === 'missed') ptDisplay = `${deed.challenge.penalty}`;
+                    } else if (deed.category === 'jamaah') {
+                        if(status === 'done_jamaah') ptDisplay = `+${pts.done_jamaah}`;
+                        else if(status === 'done_alone') ptDisplay = `+${pts.done_alone}`;
+                        else if(status === 'missed') ptDisplay = `${pts.missed}`;
+                    } else if (deed.category !== 'misdeed') {
+                        if(status === 'done') ptDisplay = `+${pts.done}`;
+                        else if(status === 'missed') ptDisplay = `${pts.missed}`;
+                    }
+
+                    let controlsHtml = '';
+                    let challengeProgressHtml = '';
+
+                    if (deed.category === 'challenge') {
+                        const daysDone = getChallengeDays(deed.id, state.settings.challenges[deed.id]);
+                        const target = deed.challenge.target;
+                        const pct = Math.min(100, (daysDone / target) * 100);
+                        challengeProgressHtml = `<div class="w-full mt-2 mb-2"><div class="flex justify-between text-xs text-gray-500 mb-1"><span>Day ${daysDone} / ${target}</span><span>${Math.round(pct)}%</span></div><div class="chart-bar-bg h-2"><div class="chart-bar-fill bg-amber-500" style="width: ${pct}%"></div></div></div>`;
+                        controlsHtml = `<div class="flex space-x-2 rtl:space-x-reverse mt-2 md:mt-0"><button onclick="markDeed('${deed.id}', 'done')" class="w-8 h-8 rounded-full flex items-center justify-center border transition ${status==='done' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-gray-300 text-gray-300 hover:border-emerald-600 hover:text-emerald-600'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></button><button onclick="markDeed('${deed.id}', 'missed')" class="w-8 h-8 rounded-full flex items-center justify-center border transition ${status==='missed' ? 'bg-red-500 text-white border-red-500' : 'border-gray-300 text-gray-300 hover:border-red-500 hover:text-red-500'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>`;
+                    }
+                    else if (deed.category === 'misdeed') {
+                        const currentVal = parseInt(status) || 0;
+                        const score = currentVal * 2;
+                        controlsHtml = `<div class="flex flex-col w-full md:w-64 mt-2 md:mt-0"><div class="flex justify-between text-xs text-gray-500 mb-1"><span>${t.avoidRating}</span><span id="valDisplay_${deed.id}" class="font-bold text-emerald-600">${currentVal}/10</span></div><input type="range" min="0" max="10" value="${currentVal}" oninput="rateDeed('${deed.id}', this.value)" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"><div class="flex justify-end mt-1"><span id="scoreDisplay_${deed.id}" class="text-xs font-bold text-purple-600">+${score} ${t.lblPoints}</span></div></div>`;
+                    }
+                    else if (deed.category === 'jamaah') {
+                        controlsHtml = `<div class="flex space-x-1 rtl:space-x-reverse mt-2 md:mt-0"><button onclick="markDeed('${deed.id}', 'done_jamaah')" title="${t.lblJamaah}" class="w-8 h-8 rounded flex items-center justify-center border transition ${status==='done_jamaah' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-400 border-gray-300 hover:bg-emerald-50 hover:text-emerald-600'}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button><button onclick="markDeed('${deed.id}', 'done_alone')" title="${t.lblAlone}" class="w-8 h-8 rounded flex items-center justify-center border transition ${status==='done_alone' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-300 hover:bg-blue-50 hover:text-blue-500'}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></button><button onclick="markDeed('${deed.id}', 'missed')" title="${t.lblMissed}" class="w-8 h-8 rounded flex items-center justify-center border transition ${status==='missed' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-400 border-gray-300 hover:bg-red-50 hover:text-red-500'}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button></div>`;
+                    } else if (deed.mode === 'others') {
+                        controlsHtml = `<button onclick="markDeed('${deed.id}', 'done')" class="w-8 h-8 rounded-full flex items-center justify-center border transition ${status==='done' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-gray-300 text-gray-300 hover:border-emerald-600 hover:text-emerald-600'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></button>`;
+                    } else {
+                        controlsHtml = `<div class="flex space-x-2 rtl:space-x-reverse mt-2 md:mt-0"><button onclick="markDeed('${deed.id}', 'done')" class="w-8 h-8 rounded-full flex items-center justify-center border transition ${status==='done' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-gray-300 text-gray-300 hover:border-emerald-600 hover:text-emerald-600'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></button><button onclick="markDeed('${deed.id}', 'missed')" class="w-8 h-8 rounded-full flex items-center justify-center border transition ${status==='missed' ? 'bg-red-500 text-white border-red-500' : 'border-gray-300 text-gray-300 hover:border-red-500 hover:text-red-500'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>`;
+                    }
+
+                    let displayName = (isAr && deed.nameAr) ? deed.nameAr : deed.name;
+                    if (deed.id === 'dhuhr' && todayDate.getDay() === 5) displayName = isAr ? "الجمعة" : "Jummah";
+
+                    item.innerHTML = `<div class="flex-1 w-full md:w-auto"><p class="font-medium text-gray-800">${displayName}</p><p class="text-xs text-gray-500 badge bg-gray-100 inline-block px-1 rounded">${deed.category.replace('_', ' ')}</p>${challengeProgressHtml}</div><div class="flex items-center justify-between md:justify-end md:space-x-4 rtl:space-x-reverse w-full md:w-auto">${ptDisplay ? `<span class="text-xs font-bold ${(status==='missed'||(status && status.includes('-') && pts.missed < 0)) ? 'text-red-600' : 'text-green-600'} fade-in mx-2">${ptDisplay} ${t.lblPoints}</span>` : ''}${controlsHtml}</div>`;
+                    list.appendChild(item);
+                });
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(list);
+                container.appendChild(groupDiv);
+            });
+            
+            checkReminders();
+            updateStats();
+        }
+
+        function updateStats() {
+            const t = TRANSLATIONS[state.settings.lang];
+            const todayKey = getTodayKey();
+            const todayScore = calculatePoints(todayKey);
+            document.getElementById('scoreTodayVal').innerText = todayScore;
+            document.getElementById('reportTodayScore').innerText = todayScore + ' ' + t.lblPoints;
+            const d = new Date(state.viewDate);
+            d.setDate(d.getDate() - 1);
+            const yKey = d.toISOString().split('T')[0];
+            document.getElementById('scoreYesterdayVal').innerText = calculatePoints(yKey);
+
+            let wScore = 0;
+            let mScore = 0;
+            const today = new Date(); 
+            const hList = document.getElementById('historyList');
+            hList.innerHTML = '';
+            for(let i=0; i<30; i++) {
+                let tempD = new Date(); 
+                tempD.setDate(tempD.getDate() - i);
+                const k = tempD.toISOString().split('T')[0];
+                const sc = state.logs[k] ? calculatePoints(k) : 0; 
+                if (i < 7) {
+                    wScore += sc;
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between py-2 px-2";
+                    row.innerHTML = `<span class="text-sm text-gray-600">${tempD.toLocaleDateString()}</span> <span class="font-bold ${sc >= 0 ? 'text-emerald-600':'text-red-500'}">${sc} ${t.lblPoints}</span>`;
+                    hList.appendChild(row);
+                }
+                if (tempD.getMonth() === today.getMonth() && tempD.getFullYear() === today.getFullYear()) {
+                    mScore += sc;
+                }
+            }
+            document.getElementById('scoreWeekVal').innerText = wScore;
+            document.getElementById('scoreMonthVal').innerText = mScore;
+            
+            const chList = document.getElementById('challengeSummaryList');
+            if (chList) {
+                chList.innerHTML = '';
+                const challenges = state.deeds.filter(d => d.category === 'challenge');
+                if (challenges.length === 0) chList.innerHTML = '<p class="text-xs text-gray-400">No active challenges</p>';
+                challenges.forEach(c => {
+                    const daysDone = getChallengeDays(c.id, state.settings.challenges[c.id]);
+                    const target = c.challenge.target;
+                    const pct = Math.min(100, (daysDone / target) * 100);
+                    const div = document.createElement('div');
+                    div.innerHTML = `<div class="flex justify-between text-sm font-bold text-gray-700"><span>${c.name}</span><span>${daysDone}/${target}</span></div><div class="chart-bar-bg mt-1"><div class="chart-bar-fill bg-amber-500" style="width: ${pct}%"></div></div>`;
+                    chList.appendChild(div);
+                });
+            }
+            
+            setTimeout(() => {
+                const elToday = document.getElementById('barToday');
+                if (elToday) elToday.style.width = Math.min(100, Math.max(0, todayScore / 200 * 100)) + '%';
+                const elWeek = document.getElementById('barWeek');
+                document.getElementById('reportWeekScore').innerText = wScore + ' ' + t.lblPoints;
+                if (elWeek) elWeek.style.width = Math.min(100, Math.max(0, wScore / 1000 * 100)) + '%';
+                const elMonth = document.getElementById('barMonth');
+                document.getElementById('reportMonthScore').innerText = mScore + ' ' + t.lblPoints;
+                if (elMonth) elMonth.style.width = Math.min(100, Math.max(0, mScore / 4000 * 100)) + '%';
+            }, 100);
+        }
+
+        function checkReminders() {
+            const tomorrow = new Date(state.viewDate);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const hTom = getHijriDate(tomorrow, state.settings.hijriOffset);
+            const deeds = getRelevantDeeds(tomorrow, hTom);
+            const specialDeeds = deeds.filter(d => d.mode !== 'daily' && d.mode !== 'others');
+            const box = document.getElementById('remindersBox');
+            const list = document.getElementById('remindersList');
+            list.innerHTML = '';
+            if (specialDeeds.length > 0) {
+                box.classList.remove('hidden');
+                specialDeeds.forEach(d => {
+                    const li = document.createElement('li');
+                    li.innerText = d.name;
+                    list.appendChild(li);
+                });
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* SETTINGS UI                                  */
+        /* -------------------------------------------------------------------------- */
+
+        function renderSettingsList() {
+            document.getElementById('hijriOffsetVal').innerText = state.settings.hijriOffset;
+            document.getElementById('quranPagesInput').value = state.settings.quranPages || 20;
+            calcQuranCompletion();
+            const list = document.getElementById('allDeedsList');
+            list.innerHTML = '';
+            state.deeds.forEach(d => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200";
+                div.innerHTML = `<span>${d.name} <span class="text-xs text-gray-400">(${d.mode})</span></span><button onclick="editDeed('${d.id}')" class="text-blue-500 hover:underline text-xs">Edit</button>`;
+                list.appendChild(div);
+            });
+        }
+
+        function adjustHijri(amount) {
+            state.settings.hijriOffset += amount;
+            saveData();
+            renderHijriDate();
+            renderSettingsList();
+            renderHome();
+        }
+        
+        function saveSettings() {
+             state.settings.quranPages = parseInt(document.getElementById('quranPagesInput').value);
+             saveData();
+             const msgBox = document.createElement('div');
+             msgBox.className = "fixed top-5 right-5 bg-emerald-500 text-white p-3 rounded-lg shadow-xl fade-in z-50";
+             msgBox.innerText = TRANSLATIONS[state.settings.lang].saveSettings + "!";
+             document.body.appendChild(msgBox);
+             setTimeout(() => msgBox.remove(), 2000);
+        }
+        
+        /* Deed Form Logic */
+        function toggleDeedForm() {
+            const form = document.getElementById('deedForm');
+            form.classList.toggle('hidden');
+            if(!form.classList.contains('hidden')) resetDeedForm();
+        }
+        
+        function resetDeedForm() {
+            document.getElementById('editDeedId').value = '';
+            document.getElementById('deedName').value = '';
+            document.getElementById('deedNameAr').value = ''; 
+            document.getElementById('deedGroup').value = "Sala'th"; 
+            document.getElementById('deedCategory').value = 'sunnah';
+            document.getElementById('deedMode').value = 'daily';
+            document.getElementById('deedExceptMode').value = 'none'; 
+            document.getElementById('deleteDeedBtn').classList.add('hidden');
+            checkChallengeGroup("Sala'th");
+            updateDeedFormInputs();
+            updateExceptInputs();
+        }
+        
+        function checkChallengeGroup(val) {
+             const chBox = document.getElementById('challengeSettingsBox');
+             if(val === 'Challenges') {
+                 chBox.classList.remove('hidden');
+                 document.getElementById('deedCategory').value = 'challenge';
+             } else {
+                 chBox.classList.add('hidden');
+             }
+        }
+        
+        function updateDeedFormInputs() {
+            const mode = document.getElementById('deedMode').value;
+            const container = document.getElementById('repeatConfigContainer');
+            container.innerHTML = '';
+            if (mode === 'weekly') {
+                container.innerHTML = `<p class="text-xs mb-1">Select Days:</p><div class="flex flex-wrap gap-2 text-sm">${['Su','Mo','Tu','We','Th','Fr','Sa'].map((d, i) => `<label class="flex items-center space-x-1 cursor-pointer bg-gray-200 px-3 py-1 rounded-full"><input type="checkbox" class="wk-chk mr-1" value="${i}"><span>${d}</span></label>`).join('')}</div>`;
+            } else if (mode === 'monthly_hijri') {
+                container.innerHTML = `<input type="number" id="repeatVal" placeholder="Hijri Day (1-30)" class="border p-2 rounded w-full">`;
+            } else if (mode === 'yearly_hijri') {
+                container.innerHTML = `<input type="text" id="repeatVal" placeholder="Month-Day (e.g. 12-10)" class="border p-2 rounded w-full">`;
+            }
+        }
+        
+        function updateExceptInputs() {
+            const mode = document.getElementById('deedExceptMode').value;
+            const container = document.getElementById('exceptContainer');
+            container.innerHTML = '';
+            container.className = mode === 'none' ? 'hidden' : 'grid grid-cols-2 gap-2';
+            if (mode === 'month') {
+                 container.innerHTML = `<div class="col-span-2"><select id="exceptMonth" class="border p-2 rounded w-full text-sm">${Array.from({length:12}, (_, i) => `<option value="${i+1}">Month ${i+1} (e.g. ${getHijriMonthName(i+1, 'en')})</option>`).join('')}</select></div>`;
+            } else if (mode === 'date') {
+                 container.innerHTML = `<div><select id="exceptMonth" class="border p-2 rounded w-full text-sm">${Array.from({length:12}, (_, i) => `<option value="${i+1}">Month ${i+1}</option>`).join('')}</select></div><div><input type="number" id="exceptDay" placeholder="Day (1-30)" class="border p-2 rounded w-full text-sm" min="1" max="30"></div>`;
+            }
+        }
+        
+        function editDeed(id) {
+            const d = state.deeds.find(x => x.id === id);
+            if(!d) return;
+            document.getElementById('deedForm').classList.remove('hidden');
+            document.getElementById('editDeedId').value = d.id;
+            document.getElementById('deedName').value = d.name;
+            document.getElementById('deedNameAr').value = d.nameAr || ''; 
+            document.getElementById('deedGroup').value = d.group;
+            document.getElementById('deedCategory').value = d.category;
+            document.getElementById('deedMode').value = d.mode;
+            checkChallengeGroup(d.group);
+            if (d.group === 'Challenges' && d.challenge) {
+                 document.getElementById('chTarget').value = d.challenge.target || 40;
+                 document.getElementById('chPenalty').value = d.challenge.penalty || 0;
+            }
+            if (d.except) {
+                document.getElementById('deedExceptMode').value = d.except.mode;
+            } else {
+                document.getElementById('deedExceptMode').value = 'none';
+            }
+            document.getElementById('deleteDeedBtn').classList.remove('hidden');
+            updateDeedFormInputs();
+            updateExceptInputs();
+            setTimeout(() => {
+                if(d.mode === 'weekly') {
+                    const chks = document.querySelectorAll('.wk-chk');
+                    chks.forEach(c => {
+                        const repeatArray = Array.isArray(d.repeat) ? d.repeat : [];
+                        if(repeatArray.includes(parseInt(c.value))) c.checked = true;
+                    });
+                } else if (['monthly_hijri', 'yearly_hijri'].includes(d.mode)) {
+                    if(document.getElementById('repeatVal')) document.getElementById('repeatVal').value = d.repeat;
+                }
+                if (d.except && d.except.mode !== 'none') {
+                    if(document.getElementById('exceptMonth')) document.getElementById('exceptMonth').value = d.except.month;
+                    if(document.getElementById('exceptDay') && d.except.day) document.getElementById('exceptDay').value = d.except.day;
+                }
+            }, 100);
+        }
+        
+        function saveDeedFromForm() {
+            const id = document.getElementById('editDeedId').value || 'deed_' + Date.now();
+            const name = document.getElementById('deedName').value.trim();
+            const nameAr = document.getElementById('deedNameAr').value.trim();
+            const group = document.getElementById('deedGroup').value;
+            const cat = document.getElementById('deedCategory').value;
+            const mode = document.getElementById('deedMode').value;
+            const exceptMode = document.getElementById('deedExceptMode').value;
+            if(!name) return;
+            let repeat = null;
+            if(mode === 'weekly') {
+                repeat = Array.from(document.querySelectorAll('.wk-chk:checked')).map(c => parseInt(c.value));
+            } else if (['monthly_hijri', 'yearly_hijri'].includes(mode)) {
+                repeat = document.getElementById('repeatVal').value;
+            }
+            let except = null;
+            if (exceptMode !== 'none') {
+                except = { mode: exceptMode, month: document.getElementById('exceptMonth').value };
+                if (exceptMode === 'date') except.day = document.getElementById('exceptDay').value;
+            }
+            let challengeData = null;
+            if (group === 'Challenges') {
+                 challengeData = {
+                     target: parseInt(document.getElementById('chTarget').value) || 40,
+                     penalty: parseInt(document.getElementById('chPenalty').value) || 0,
+                     startDate: null
+                 };
+            }
+            const newDeed = { id, name, nameAr, group, category: cat, mode, repeat, except, challenge: challengeData };
+            const idx = state.deeds.findIndex(x => x.id === id);
+            if(idx > -1) {
+                if (challengeData && state.deeds[idx].challenge && state.deeds[idx].challenge.startDate) {
+                     newDeed.challenge.startDate = state.deeds[idx].challenge.startDate;
+                }
+                state.deeds[idx] = newDeed;
+            } else {
+                state.deeds.push(newDeed);
+            }
+            saveData();
+            renderSettingsList();
+            renderHome();
+            toggleDeedForm();
+        }
+
+        function deleteDeed() {
+            const id = document.getElementById('editDeedId').value;
+            if (confirm("Delete this deed?")) {
+                state.deeds = state.deeds.filter(x => x.id !== id);
+                delete state.settings.challenges[id]; 
+                saveData();
+                renderSettingsList();
+                renderHome();
+                toggleDeedForm();
+            }
+        }
+        
+        function resetAllData() {
+            if (confirm("Are you sure? This will delete all logs and settings.")) {
+                localStorage.removeItem('muhasaba_deeds');
+                localStorage.removeItem('muhasaba_logs');
+                localStorage.removeItem('muhasaba_settings');
+                localStorage.removeItem('muhasaba_prayers');
+                location.reload();
+            }
+        }
+
+        function switchTab(tabId) {
+            ['home', 'reports', 'settings'].forEach(t => {
+                document.getElementById(t).classList.add('hidden');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            const btns = document.querySelectorAll('.nav-btn');
+            btns.forEach(b => {
+                b.classList.remove('tab-active', 'text-emerald-600', 'font-bold');
+                b.classList.add('text-gray-500', 'hover:text-emerald-600');
+            });
+            const activeBtn = Array.from(btns).find(b => b.onclick.toString().includes(`'${tabId}'`));
+            if (activeBtn) {
+                 activeBtn.classList.add('tab-active');
+                 activeBtn.classList.remove('text-gray-500', 'hover:text-emerald-600');
+            }
+            if(tabId === 'reports') {
+                updateStats(); 
+            }
+        }
+        
+        function applyTheme() {
+            const t = TRANSLATIONS[state.settings.lang];
+            const isAr = state.settings.lang === 'ar';
+            document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+            document.getElementById('langToggle').innerText = isAr ? 'English' : 'عربي';
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(t[key]) el.innerText = t[key];
+            });
+            calcQuranCompletion();
+            renderHijriDate();
+        }
+
+        document.getElementById('langToggle').onclick = () => {
+            state.settings.lang = state.settings.lang === 'en' ? 'ar' : 'en';
+            saveData();
+            applyTheme();
+            renderHome();
+            updateStats();
+        };
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
